@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "ostream": "c",
+        "cstdint": "cpp",
+        "colormap.h": "c",
+        "lv_font.h": "c",
+        "mean_filter.h": "c",
+        "arduino.h": "c",
+        "ratio": "c",
+        "limits": "cpp",
+        "*.old": "cpp",
+        "mutex": "c",
+        "list": "cpp",
+        "charconv": "cpp",
+        "chrono": "cpp",
+        "optional": "cpp",
+        "format": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "regex": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}
