@@ -16,7 +16,7 @@
 #include "logo_jpg.h"
 #include <TJpg_Decoder.h>
 // 全局滤波器实例
-KalmanFilterRawUShort rawTempFilter;        // 用于原始温度
+//KalmanFilterRawUShort rawTempFilter;        // 用于原始温度
 KalmanFilterMappedUShort mappedValueFilter; // 用于映射值
 
 #define PROB_SCALE 7.5
@@ -261,8 +261,9 @@ void data_pixel_to_draw_pixel(unsigned short data[GRID_SIZE][GRID_SIZE])
   // 卡尔曼滤波——原始数据
   if (use_kalman_model >= 1)
   {
-    rawTempFilter.updateTempRange(T_min, T_max);
-    rawTempFilter.processFrame(new_data_pixel);
+    //rawTempFilter.updateTempRange(T_min, T_max);
+    //rawTempFilter.processFrame(new_data_pixel);
+    processFrame(new_data_pixel);
   }
 
   // 预先计算常量值

@@ -112,7 +112,8 @@ void setup()
   ui_init(); // eez UI
   ColorMap_init();
   battery_init();
-  rawTempFilter.setNoiseParams(1.2, 1.8); // 原始温度参数
+  initKalmanFilters(3000);
+  //rawTempFilter.setNoiseParams(1.2, 1.8); // 原始温度参数
   buttonManager.begin();
   // 设置回调函数
   // buttonManager.setCallbacks(

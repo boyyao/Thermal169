@@ -4,81 +4,68 @@
 #include <Arduino.h>
 
 #define GRID_SIZE 32
+#define NUM_PIXELS (GRID_SIZE * GRID_SIZE)
 
+typedef int32_t fixed_point;
+#define FIXED_SHIFT 8
+#define FLOAT_TO_FIXED(x) ((fixed_point)((x) * (1 << FIXED_SHIFT)))
+#define FIXED_TO_FLOAT(x) ((float)(x) / (1 << FIXED_SHIFT))
+#define INT_TO_FIXED(x) ((fixed_point)(x) << FIXED_SHIFT)
+#define FIXED_TO_INT(x) ((x) >> FIXED_SHIFT)
+#define FIXED_MULT(a, b) ((fixed_point)(((int64_t)(a) * (b)) >> FIXED_SHIFT))
+
+// 卡尔曼滤波器结构体
 typedef struct {
-    float P;        // 估算协方差
-    float G;        // 卡尔曼增益
-    float Output;   // 滤波器输出 (开尔文温度)
-} KFPType;
+    fixed_point state;      // 当前状态估计
+    fixed_point covariance; // 状态协方差
+} KalmanFilter;
 
-class KalmanFilterRawUShort {
-private:
-    KFPType filters[GRID_SIZE][GRID_SIZE];  // 32x32滤波器数组
-    float Q;        // 过程噪声协方差
-    float R;        // 测量噪声协方差
-    unsigned short min_temp; // 场景最低温度(乘以10)
-    unsigned short max_temp; // 场景最高温度(乘以10)
-    bool initialized;
+// 全局滤波器数组
+KalmanFilter filters[GRID_SIZE][GRID_SIZE];
 
-public:
-    // 构造函数
-    KalmanFilterRawUShort(float q = 1.0, float r = 1.5) 
-        : Q(q), R(r), min_temp(2930), max_temp(3130), initialized(false) {}
-    
-    // 初始化滤波器
-    void init(unsigned short initial_temp = 2980) {
-        for (int i = 0; i < GRID_SIZE; i++) {
-            for (int j = 0; j < GRID_SIZE; j++) {
-                filters[i][j] = {0.2, 0, initial_temp / 10.0f}; // 转换为实际温度值
-            }
-        }
-        initialized = true;
-    }
-    
-    // 更新温度范围 (输入乘以10的整数值)
-    void updateTempRange(unsigned short min, unsigned short max) {
-        min_temp = min;
-        max_temp = max;
-    }
-    
-    // 设置噪声参数
-    void setNoiseParams(float q, float r) {
-        Q = q;
-        R = r;
-    }
-    
-    // 直接处理原数组
-    void processFrame(unsigned short data[GRID_SIZE][GRID_SIZE]) 
-    {
-        if (!initialized) init();
-        for (int i = 0; i < GRID_SIZE; i++) {
-            for (int j = 0; j < GRID_SIZE; j++) {
-                KFPType* kfp = &filters[i][j];
-                // 保存当前值（滤波前）
-                unsigned short current_value = data[i][j];
-                // 转换为实际温度值
-                float actual_input = current_value / 10.0f;
-                // 预测步骤
-                kfp->P = kfp->P + Q;
-                // 更新步骤
-                kfp->G = kfp->P / (kfp->P + R);
-                kfp->Output = kfp->Output + kfp->G * (actual_input - kfp->Output);
-                kfp->P = (1 - kfp->G) * kfp->P;
-                // 直接更新原数组：转换回乘以10的整数值
-                data[i][j] = static_cast<unsigned short>(kfp->Output * 10 + 0.5f);
-            }
+const fixed_point PROCESS_NOISE = FLOAT_TO_FIXED(0.1f);  // 增加过程噪声
+const fixed_point SENSOR_NOISE = FLOAT_TO_FIXED(1.0f);   // 减小传感器噪声权重
+
+void initKalmanFilters(uint16_t initialValue) {
+    fixed_point initState = INT_TO_FIXED(initialValue);
+    for (int y = 0; y < GRID_SIZE; y++) {
+        for (int x = 0; x < GRID_SIZE; x++) {
+            filters[y][x].state = initState;
+            filters[y][x].covariance = SENSOR_NOISE; 
         }
     }
-    
-    // 获取滤波后温度 (实际温度值)
-    float getFilteredTemp(int i, int j) {
-        return filters[i][j].Output;
-    }
-    
-    // 获取滤波后原始值 (乘以10的整数值)
-    unsigned short getFilteredValue(int i, int j) {
-        return static_cast<unsigned short>(filters[i][j].Output * 10 + 0.5f);
-    }
-};
+}
 
-#endif // KALMAN_RAW_TEMP_USHORT_H
+// 处理单帧热成像数据
+void processFrame(uint16_t tempData[GRID_SIZE][GRID_SIZE]) {
+    for (int y = 0; y < GRID_SIZE; y++) {
+        for (int x = 0; x < GRID_SIZE; x++) {
+            KalmanFilter* kf = &filters[y][x];
+            uint16_t rawValue = tempData[y][x];
+            
+            // 1. 预测阶段
+            fixed_point pred_cov = kf->covariance + PROCESS_NOISE;
+            
+            // 2. 计算卡尔曼增益
+            fixed_point denominator = pred_cov + SENSOR_NOISE;
+            
+            // 使用64位整数避免溢出
+            int64_t gain_numerator = (int64_t)pred_cov << FIXED_SHIFT;
+            int64_t gain = (gain_numerator / denominator);
+            
+            // 3. 状态更新
+            fixed_point innovation = INT_TO_FIXED(rawValue) - kf->state;
+            kf->state += FIXED_MULT((fixed_point)gain, innovation);
+            
+            // 4. 协方差更新
+            fixed_point one_minus_gain = (1 << FIXED_SHIFT) - gain;
+            kf->covariance = FIXED_MULT(one_minus_gain, pred_cov);
+            
+            // 5. 将滤波后的值写回 (四舍五入)
+            fixed_point result = kf->state + (1 << (FIXED_SHIFT - 1));
+            tempData[y][x] = FIXED_TO_INT(result);
+        }
+    }
+}
+
+#endif
