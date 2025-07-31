@@ -1077,10 +1077,11 @@
     "[168.eez-project]:/userPages/1[flow-state]": {
       "selection": {
         "0": {
-          "11": {},
-          "12": {
+          "2": {
             "$selected": true
-          }
+          },
+          "11": {},
+          "12": {}
         }
       },
       "transform": {
