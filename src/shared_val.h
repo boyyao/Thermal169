@@ -164,7 +164,7 @@ enum
     COLORMAP_VIRIDIS,
     COLORMAP_INFERNO,
     COLORMAP_GRAYSR, // 白热
-    COLORMAP_GRAYS   // 黑热
+    COLORMAP_TEST   // 黑热
 }; // 颜色映射表类型
 
 const char *ColorMapNames[] = {
@@ -174,8 +174,8 @@ const char *ColorMapNames[] = {
     "Viridis",
     "Inferno",
     "Grays_R",
-    "Grays"};
-
+    "Test"};
+    
 enum
 {
     PROB_CONNECTING,
