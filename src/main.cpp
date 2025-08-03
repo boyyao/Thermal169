@@ -133,7 +133,7 @@ void setup()
   smooth_on();
   // 屏幕已亮起。。
   // 等待传感器初始化完成
-  // while (prob_status != PROB_READY)
+  // while (!PROB_READY)
   // {
   //   delay(5);
   // }
@@ -154,11 +154,16 @@ void loop()
   usbFS_loop();
 }
 
+//暂留原版兼容配置。
+#define MLX_VDD 11
+
 void setup1()
 {
-  sensor_power_on();
-  sensor_init();
-  while (prob_status != PROB_READY)
+  pinMode(MLX_VDD, OUTPUT);
+  digitalWrite(MLX_VDD, LOW);
+  
+  sensor_setup();
+  while (!PROB_READY)
   {
     delay(5);
   }
@@ -166,5 +171,5 @@ void setup1()
 void loop1()
 {
   sensor_loop();
-  delay(5);
+  delay(1);
 }

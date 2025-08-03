@@ -176,19 +176,14 @@ const char *ColorMapNames[] = {
     "Grays_R",
     "Test"};
     
-enum
-{
-    PROB_CONNECTING,
-    PROB_INITIALIZING,
-    PROB_PREPARING,
-    PROB_READY
-}; // 探头目前的启动状态码
-uint8_t prob_status = PROB_CONNECTING;      // 探头当前状态
+
+
 uint8_t cmap_now_choose = COLORMAP_CLASSIC; // 当前所使用的颜色映射表
 // 线程锁
 bool prob_lock = true;
 bool pix_cp_lock = false;
 bool cmap_loading_lock = false;      // 颜色映射表加载锁
+bool PROB_READY = false; // 探头是否准备就绪
 int brightness = 128;                // 屏幕亮度
 unsigned short T_max, T_min;         // 温度
 unsigned long T_avg;                 // 需要累加后再除平均数。所以要long类型
