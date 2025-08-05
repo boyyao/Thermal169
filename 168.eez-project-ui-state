@@ -1,7 +1,7 @@
 {
   "navigation": {
     "selectedUserPageObject": "[168.eez-project]:/userPages/1",
-    "selectedActionObject": "[168.eez-project]:/actions/7",
+    "selectedActionObject": "[168.eez-project]:/actions/10",
     "selectedFontObject": "[168.eez-project]:/fonts/0",
     "subnavigationSelectedItems": {
       "variables-tab/sub-navigation/selected-item": "Actions"
@@ -193,7 +193,7 @@
               "type": "tabset",
               "id": "EDITORS",
               "weight": 48.90843053591278,
-              "selected": 3,
+              "selected": 2,
               "enableDeleteWhenEmpty": false,
               "enableClose": false,
               "children": [
@@ -1062,10 +1062,10 @@
       },
       "transform": {
         "translate": {
-          "x": -419.16666666666663,
-          "y": -372.83333333333326
+          "x": -277.21666666666664,
+          "y": -71.95833333333331
         },
-        "scale": 2.5
+        "scale": 1.75
       },
       "timeline": {
         "isEditorActive": false,
@@ -1089,7 +1089,7 @@
           "x": -325,
           "y": -198.33333333333331
         },
-        "scale": 2.5
+        "scale": 1.75
       },
       "timeline": {
         "isEditorActive": false,
@@ -1114,12 +1114,9 @@
   "selectedStylePropertyName": "",
   "lvglPart": "MAIN",
   "lvglState": "DEFAULT",
-  "lvglExpandedPropertiesGroup": [
-    "TEXT",
-    "MISCELLANEOUS"
-  ],
+  "lvglExpandedPropertiesGroup": [],
   "showInactiveFlowsInDebugger": true,
   "globalFlowZoom": true,
-  "flowZoom": 2.5,
+  "flowZoom": 1.75,
   "implementationLanguage": "C"
 }

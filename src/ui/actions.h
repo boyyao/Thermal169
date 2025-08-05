@@ -17,6 +17,7 @@ extern void action_but_save_button(lv_event_t * e);
 extern void action_but_back_button(lv_event_t * e);
 extern void action_but_photo_button(lv_event_t * e);
 extern void action_but_del_button(lv_event_t * e);
+extern void action_set_gamma(lv_event_t * e);
 
 
 #ifdef __cplusplus

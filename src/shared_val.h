@@ -154,31 +154,7 @@ updateFrequency(counter1); //函数中调用
 
 
 
-
-
-enum
-{
-    COLORMAP_CLASSIC,
-    COLORMAP_TURBO,
-    COLORMAP_HOT,
-    COLORMAP_VIRIDIS,
-    COLORMAP_INFERNO,
-    COLORMAP_GRAYSR, // 白热
-    COLORMAP_TEST   // 黑热
-}; // 颜色映射表类型
-
-const char *ColorMapNames[] = {
-    "Classic",
-    "Turbo",
-    "HOT",
-    "Viridis",
-    "Inferno",
-    "Grays_R",
-    "Test"};
-    
-
-
-uint8_t cmap_now_choose = COLORMAP_CLASSIC; // 当前所使用的颜色映射表
+//uint8_t cmap_now_choose = COLORMAP_CLASSIC; // 当前所使用的颜色映射表
 // 线程锁
 bool prob_lock = true;
 bool pix_cp_lock = false;
@@ -191,6 +167,7 @@ uint16_t test_point[2] = {120, 120}; // 测温点的位置
 bool flag_show_cursor = true;        // 是否显示温度采集指针
 bool flag_show_temp_text = false;    // 是否显示温度文本
 bool flag_trace_max = true;          // 是否使用最热点追踪
+bool flag_trace_min = true; //低温追踪
 int cursor_size = 10;                // 光标大小
 int temp_text_size = 2;              // 温度文本大小
 
@@ -207,6 +184,9 @@ int interpolation_method = 3; // 0=最近邻, 1=1位双线性, 2=2位双线性, 
 int use_kalman_model = 2;     // 0=不使用，1=单次，2=多次
 bool use_sfilter = true;      // 是否使用平滑滤波器
 
+#define color_num 180              // 生成颜色数
+#define color_num_f (static_cast<float>(color_num))
+
 #define TFT_HOR_RES 240
 #define TFT_VER_RES 280
 #define TFT_ROTATION LV_DISPLAY_ROTATION_90
@@ -216,9 +196,6 @@ static TFT_eSPI tft = TFT_eSPI(TFT_HOR_RES, TFT_VER_RES);
 
 #define SCREEN_BL_PIN 4
 #define SCREEN_VDD 5
-
-
-
 
 
 

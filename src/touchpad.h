@@ -43,13 +43,12 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data)
         x = 280 - touch.tp.y;
         y = touch.tp.x;
 #endif
+        data->point.x = x;
+        data->point.y = y;
         if (in_settings)
         {
-            data->point.x = x;
-            data->point.y = y;
             return;
         }
-
         tftx = touch.tp.y;
         tfty = 240 - touch.tp.x;
         if (tftx < 230)

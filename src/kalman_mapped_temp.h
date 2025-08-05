@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 #define GRID_SIZE 32
-#define COLOR_LEVELS 180
+#define COLOR_LEVELS color_num
 
 typedef struct {
     float P;        // 估算协方差

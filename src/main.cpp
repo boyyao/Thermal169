@@ -137,6 +137,7 @@ void setup()
   // {
   //   delay(5);
   // }
+  touch_gamma_init();
 
   FATFS_init();
   Serial.println("Setup done");
@@ -161,7 +162,7 @@ void setup1()
 {
   pinMode(MLX_VDD, OUTPUT);
   digitalWrite(MLX_VDD, LOW);
-  
+
   sensor_setup();
   while (!PROB_READY)
   {

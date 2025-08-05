@@ -2455,7 +2455,7 @@ void sensor_setup()
 #endif
 }
 
-CallFrequency counter2 = initFrequencyCounter("sensor_loopFunction"); // 先声明
+//CallFrequency counter2 = initFrequencyCounter("sensor_loopFunction"); // 先声明
 // /********************************************************************
 //   Function:        loop()
 //   Description:
@@ -2486,7 +2486,7 @@ void sensor_loop()
       sort_data(); // sort the data if the reading routing is done
       state = 0;   // reset the state to sample new raw pixel data
       calculate_pixel_temp();
-      updateFrequency(counter2);
+      //updateFrequency(counter2);
     }
 
     //*******************************************************************

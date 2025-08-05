@@ -3,154 +3,349 @@
 #include <lvgl.h>
 #include <Arduino.h>
 #include "shared_val.h"
+#include <math.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <float.h>
+#include "lvgl.h"
+static uint16_t colormap[color_num];
 
-static uint16_t colormap[180];
+typedef struct
+{
+  float pos;
+  uint8_t r, g, b;
+} ColorKeypoint;
 
-uint16_t viridis[180] PROGMEM = {
-    0x400A, 0x400A, 0x400A, 0x400A, 0x400A, 0x400A, 0x402B, 0x402B, 0x404B, 0x404B,
-    0x404B, 0x406B, 0x406B, 0x406C, 0x406C, 0x408C, 0x408C, 0x408C, 0x40AC, 0x40AC,
-    0x40AD, 0x40AD, 0x48CD, 0x48CD, 0x48CD, 0x48CD, 0x48ED, 0x48EE, 0x48EE, 0x490E,
-    0x490E, 0x490E, 0x490E, 0x490E, 0x490E, 0x412E, 0x412E, 0x412E, 0x414F, 0x414F,
-    0x414F, 0x414F, 0x416F, 0x416F, 0x416F, 0x418F, 0x418F, 0x418F, 0x418F, 0x41AF,
-    0x41AF, 0x41B0, 0x41B0, 0x41B0, 0x41D0, 0x41D0, 0x41D0, 0x41D0, 0x41F0, 0x41F0,
-    0x41F0, 0x41F0, 0x4210, 0x4210, 0x4210, 0x4210, 0x4210, 0x4230, 0x4230, 0x3A31,
-    0x3A31, 0x3A51, 0x3A51, 0x3A51, 0x3A51, 0x3A51, 0x3A71, 0x3A71, 0x3A71, 0x3A71,
-    0x3A91, 0x3A91, 0x3A91, 0x3A91, 0x3A91, 0x3AB1, 0x3AB1, 0x3AB1, 0x3AB1, 0x32B1,
-    0x32D1, 0x32D1, 0x32D1, 0x32F1, 0x3311, 0x3311, 0x3331, 0x3331, 0x2B51, 0x2B51,
-    0x2B71, 0x2B71, 0x2B91, 0x2B91, 0x2BB1, 0x2BB1, 0x2BD1, 0x23D1, 0x23F1, 0x23F1,
-    0x23F1, 0x2411, 0x2431, 0x2431, 0x2451, 0x2451, 0x2451, 0x2471, 0x2491, 0x1C91,
-    0x1CB1, 0x1CB1, 0x1CD1, 0x1CD1, 0x1CD1, 0x1CF1, 0x1D10, 0x1D10, 0x1D10, 0x2530,
-    0x2530, 0x2550, 0x2550, 0x2570, 0x2D6F, 0x2D8F, 0x2D8F, 0x2DAF, 0x35AF, 0x35CE,
-    0x3DCE, 0x3DEE, 0x45EE, 0x460D, 0x4E0D, 0x4E0D, 0x4E2C, 0x562C, 0x564C, 0x5E4C,
-    0x666B, 0x666B, 0x6E6A, 0x766A, 0x768A, 0x7689, 0x8689, 0x8EA8, 0x8EA8, 0x96A8,
-    0x96C7, 0x9EC7, 0xA6C6, 0xA6C6, 0xAEE6, 0xB6E5, 0xB6E5, 0xBEE4, 0xC6E4, 0xC703,
-    0xCF03, 0xD703, 0xD703, 0xDF03, 0xE703, 0xEF23, 0xEF23, 0xF723, 0xFF23, 0xFF24};
-
-uint16_t classic[180] PROGMEM = {
-    0x0002, 0x0003, 0x0003, 0x0004, 0x0004, 0x0005, 0x0005, 0x0006, 0x0006, 0x0007,
-    0x0007, 0x0008, 0x0008, 0x0009, 0x0009, 0x000a, 0x000a, 0x000b, 0x000b, 0x000c,
-    0x000c, 0x000d, 0x000d, 0x000e, 0x000e, 0x000f, 0x000f, 0x0010, 0x0010, 0x0011,
-    0x0011, 0x0011, 0x0811, 0x0810, 0x1010, 0x1010, 0x1810, 0x180f, 0x200f, 0x200f,
-    0x280f, 0x280e, 0x300e, 0x300e, 0x380e, 0x380d, 0x400d, 0x400d, 0x480d, 0x480c,
-    0x500c, 0x500c, 0x580c, 0x580b, 0x600b, 0x600b, 0x680b, 0x680a, 0x700a, 0x700a,
-    0x780a, 0x7809, 0x8009, 0x8009, 0x8809, 0x8808, 0x9008, 0x9008, 0x9808, 0x9807,
-    0xa007, 0xa007, 0xa807, 0xa806, 0xb006, 0xb006, 0xb806, 0xb805, 0xc005, 0xc005,
-    0xc805, 0xc804, 0xd004, 0xd004, 0xd804, 0xd803, 0xe003, 0xe003, 0xe803, 0xe802,
-    0xf801, 0xf801, 0xf821, 0xf821, 0xf841, 0xf841, 0xf861, 0xf861, 0xf881, 0xf880,
-    0xf8a0, 0xf8a0, 0xf8c0, 0xf8c0, 0xf8e0, 0xf8e0, 0xf900, 0xf900, 0xf920, 0xf920,
-    0xf940, 0xf940, 0xf960, 0xf960, 0xf980, 0xf980, 0xf9a0, 0xf9a0, 0xf9c0, 0xf9c0,
-    0xf9e0, 0xfa00, 0xfa20, 0xfa60, 0xfa80, 0xfac0, 0xfae0, 0xfb20, 0xfb40, 0xfb80,
-    0xfba0, 0xfbe0, 0xfc00, 0xfc20, 0xfc60, 0xfc80, 0xfcc0, 0xfce0, 0xfd20, 0xfd40,
-    0xfd80, 0xfda0, 0xfde0, 0xfe00, 0xfe40, 0xfe60, 0xfe80, 0xfec0, 0xfee0, 0xff20,
-    0xff40, 0xff41, 0xff62, 0xff63, 0xff64, 0xff65, 0xff66, 0xff67, 0xff88, 0xff89,
-    0xff8a, 0xff8b, 0xff8c, 0xff8d, 0xffae, 0xffaf, 0xffb1, 0xffb2, 0xffb3, 0xffb4,
-    0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9, 0xffda, 0xfffb, 0xfffc, 0xfffd, 0xfffe};
-
-uint16_t hot[180] PROGMEM = {
-    0x0800, 0x0800, 0x0800, 0x0800, 0x0800, 0x0800, 0x1000, 0x1000, 0x1000, 0x1800,
-    0x1800, 0x1800, 0x1800, 0x2000, 0x2000, 0x2000, 0x2000, 0x2800, 0x2800, 0x2800,
-    0x3000, 0x3000, 0x3000, 0x3000, 0x3800, 0x3800, 0x3800, 0x4000, 0x4000, 0x4000,
-    0x4000, 0x4800, 0x4800, 0x4800, 0x4800, 0x5000, 0x5000, 0x5000, 0x5000, 0x5000,
-    0x5800, 0x5800, 0x5800, 0x5800, 0x6000, 0x6000, 0x6000, 0x6800, 0x6800, 0x6800,
-    0x6800, 0x7000, 0x7000, 0x7000, 0x7800, 0x7800, 0x7800, 0x7800, 0x8000, 0x8000,
-    0x8000, 0x8000, 0x8800, 0x8800, 0x8800, 0x9000, 0x9000, 0x9000, 0x9000, 0x9800,
-    0x9800, 0x9800, 0x9800, 0x9800, 0xa000, 0xa000, 0xa000, 0xa000, 0xa800, 0xa800,
-    0xa800, 0xb000, 0xb000, 0xb000, 0xb000, 0xb000, 0xb000, 0xb800, 0xb800, 0xb800,
-    0xc000, 0xc000, 0xc800, 0xd000, 0xd000, 0xd800, 0xe000, 0xe800, 0xe800, 0xf000,
-    0xf800, 0xf800, 0xf820, 0xf820, 0xf860, 0xf880, 0xf8c0, 0xf8e0, 0xf920, 0xf940,
-    0xf960, 0xf9a0, 0xf9c0, 0xfa00, 0xfa20, 0xfa40, 0xfa60, 0xfaa0, 0xfac0, 0xfae0,
-    0xfb20, 0xfb40, 0xfb80, 0xfb80, 0xfbc0, 0xfc00, 0xfc40, 0xfc40, 0xfc60, 0xfca0,
-    0xfcc0, 0xfd00, 0xfd20, 0xfd60, 0xfd60, 0xfda0, 0xfdc0, 0xfde0, 0xfe20, 0xfe40,
-    0xfe80, 0xfea0, 0xfee0, 0xff00, 0xff40, 0xff40, 0xff60, 0xffa0, 0xffc0, 0xffe0,
-    0xffe1, 0xffe2, 0xffe3, 0xffe4, 0xffe5, 0xffe6, 0xffe7, 0xffe8, 0xffe9, 0xffea,
-    0xffeb, 0xffec, 0xffee, 0xffee, 0xffef, 0xfff0, 0xfff1, 0xfff2, 0xfff3, 0xfff5,
-    0xfff5, 0xfff7, 0xfff7, 0xfff8, 0xfff9, 0xfffa, 0xfffb, 0xfffc, 0xfffd, 0xfffe};
-
-uint16_t turbo[180] PROGMEM = {
-    0x3087, 0x3087, 0x30A8, 0x30A8, 0x30C9, 0x30C9, 0x30EB, 0x30EB, 0x310B, 0x392D,
-    0x392D, 0x394E, 0x394E, 0x396F, 0x396F, 0x3990, 0x3990, 0x39B1, 0x39D2, 0x39D2,
-    0x39F3, 0x39F3, 0x4214, 0x4214, 0x4235, 0x4235, 0x4256, 0x4277, 0x4277, 0x4297,
-    0x4297, 0x42B8, 0x42B8, 0x42D9, 0x42D9, 0x42FA, 0x431A, 0x431A, 0x431B, 0x431B,
-    0x435C, 0x435C, 0x435C, 0x435C, 0x439D, 0x439D, 0x439D, 0x43BD, 0x43BE, 0x43DE,
-    0x43DE, 0x43FE, 0x43FF, 0x441F, 0x443F, 0x443F, 0x445F, 0x445F, 0x447F, 0x447F,
-    0x447F, 0x447F, 0x449F, 0x44BF, 0x44BF, 0x3CDF, 0x3CDF, 0x3CFF, 0x3CFF, 0x3D1F,
-    0x3D1F, 0x353F, 0x355F, 0x355F, 0x357E, 0x357E, 0x357E, 0x2D7E, 0x2DBE, 0x2DBE,
-    0x2DBD, 0x2DDD, 0x25DD, 0x25FD, 0x25FD, 0x261C, 0x261C, 0x263C, 0x263C, 0x1E3B,
-    0x1E7B, 0x1E7A, 0x1E9A, 0x16D9, 0x16F8, 0x1717, 0x1F37, 0x1F36, 0x1F56, 0x2775,
-    0x2774, 0x2794, 0x2F93, 0x37B2, 0x3FB1, 0x3FD1, 0x4FD0, 0x57CE, 0x5FED, 0x67ED,
-    0x6FEC, 0x77EB, 0x7FEA, 0x87E9, 0x8FE8, 0x97E8, 0x97E7, 0x9FE7, 0xA7E7, 0xAFC6,
-    0xB7C6, 0xBFC6, 0xBFA6, 0xC7A6, 0xCF86, 0xCF66, 0xD746, 0xD746, 0xDF26, 0xDF06,
-    0xE6E6, 0xE6C7, 0xEEA7, 0xEE87, 0xF667, 0xF647, 0xF627, 0xFE07, 0xFDC7, 0xFDA6,
-    0xFD86, 0xFD66, 0xFD26, 0xFCE5, 0xFCC5, 0xFCA5, 0xFC84, 0xFC44, 0xFC04, 0xFBC3,
-    0xFBA3, 0xF363, 0xF342, 0xF302, 0xF2E2, 0xF2C1, 0xEA81, 0xEA61, 0xEA41, 0xE221,
-    0xE1E1, 0xD9C0, 0xD9A0, 0xD1A0, 0xD160, 0xD140, 0xC940, 0xC120, 0xC0E0, 0xB8E0,
-    0xB8C0, 0xB0C0, 0xA8A0, 0xA880, 0x9880, 0x9060, 0x9040, 0x8840, 0x8020, 0x8020};
-
-uint16_t inferno[180] PROGMEM = {
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0001, 0x0002,
-    0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0023, 0x0023, 0x0023, 0x0823, 0x0823,
-    0x0824, 0x0824, 0x0824, 0x0824, 0x0845, 0x0845, 0x0845, 0x1045, 0x1045, 0x1046,
-    0x1046, 0x1046, 0x1046, 0x1047, 0x1047, 0x1847, 0x1848, 0x1848, 0x1868, 0x1868,
-    0x1868, 0x1868, 0x2069, 0x2069, 0x2049, 0x204a, 0x204a, 0x204a, 0x204a, 0x284a,
-    0x284a, 0x284b, 0x284b, 0x304b, 0x304b, 0x304b, 0x304c, 0x304c, 0x304c, 0x304c,
-    0x384c, 0x384c, 0x384c, 0x384c, 0x384c, 0x404c, 0x404c, 0x404d, 0x404d, 0x404d,
-    0x404d, 0x484d, 0x484d, 0x484d, 0x486d, 0x486d, 0x486d, 0x486d, 0x506d, 0x506d,
-    0x506d, 0x506d, 0x506d, 0x588d, 0x588d, 0x588d, 0x588d, 0x588d, 0x588d, 0x588d,
-    0x60ad, 0x60ad, 0x60ad, 0x68ad, 0x68cd, 0x70cd, 0x70cd, 0x78ed, 0x78ed, 0x78ed,
-    0x80ed, 0x810d, 0x890d, 0x890d, 0x892d, 0x912d, 0x912c, 0x992c, 0x994c, 0x994c,
-    0xa14c, 0xa16c, 0xa16b, 0xa96b, 0xa98b, 0xb18b, 0xb18b, 0xb9aa, 0xb9aa, 0xb9aa,
-    0xc1ca, 0xc1c9, 0xc1e9, 0xc9e9, 0xca09, 0xca28, 0xd228, 0xd248, 0xd248, 0xda67,
-    0xda67, 0xda86, 0xdaa6, 0xe2c6, 0xe2c6, 0xe2e5, 0xe2e5, 0xeb05, 0xeb24, 0xeb44,
-    0xeb64, 0xf363, 0xf3a3, 0xf3a3, 0xf3e2, 0xf3e2, 0xf402, 0xf421, 0xfc41, 0xfc61,
-    0xfc81, 0xfca0, 0xfca0, 0xfce0, 0xfce0, 0xfd01, 0xfd41, 0xfd41, 0xfd82, 0xfd82,
-    0xfda3, 0xfdc4, 0xfe05, 0xfe05, 0xfe25, 0xfe46, 0xf667, 0xf687, 0xf6a8, 0xf6e9,
-    0xf6ea, 0xf72b, 0xf72c, 0xf74d, 0xf76e, 0xf78f, 0xf7b0, 0xf7b1, 0xf7d2, 0xfff3};
-
-uint16_t greys_r[180] PROGMEM = { // 白热
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0020, 0x0020, 0x0020, 0x0841,
-    0x0841, 0x0841, 0x0841, 0x0841, 0x0841, 0x0861, 0x0861, 0x0861, 0x1082, 0x1082,
-    0x1082, 0x1082, 0x1082, 0x1082, 0x10a2, 0x10a2, 0x10a2, 0x18c3, 0x18c3, 0x18c3,
-    0x18c3, 0x18c3, 0x18c3, 0x18e3, 0x18e3, 0x18e3, 0x2104, 0x2104, 0x2104, 0x2104,
-    0x2104, 0x2104, 0x2124, 0x2124, 0x2945, 0x2945, 0x2945, 0x2945, 0x2945, 0x2965,
-    0x2965, 0x2965, 0x2965, 0x3186, 0x3186, 0x3186, 0x31a6, 0x31a6, 0x31a6, 0x31a6,
-    0x39c7, 0x39c7, 0x39c7, 0x39e7, 0x39e7, 0x4208, 0x4208, 0x4208, 0x4208, 0x4228,
-    0x4228, 0x4228, 0x4228, 0x4228, 0x4a49, 0x4a49, 0x4a49, 0x4a49, 0x4a69, 0x4a69,
-    0x4a69, 0x528a, 0x528a, 0x528a, 0x528a, 0x52aa, 0x52aa, 0x52aa, 0x52aa, 0x52aa,
-    0x5acb, 0x5acb, 0x5acb, 0x5aeb, 0x630c, 0x630c, 0x632c, 0x6b4d, 0x6b4d, 0x6b6d,
-    0x6b6d, 0x6b6d, 0x738e, 0x738e, 0x73ae, 0x73ae, 0x7bcf, 0x7bef, 0x8410, 0x8410,
-    0x8410, 0x8430, 0x8c51, 0x8c51, 0x8c71, 0x8c71, 0x9492, 0x94b2, 0x94b2, 0x94b2,
-    0x9cd3, 0x9cf3, 0xa514, 0xa514, 0xa534, 0xa534, 0xad55, 0xad75, 0xad75, 0xb596,
-    0xb596, 0xb5b6, 0xbdd7, 0xbdf7, 0xbdf7, 0xc618, 0xc618, 0xc618, 0xc638, 0xc638,
-    0xce59, 0xce59, 0xce79, 0xce79, 0xd69a, 0xd69a, 0xd69a, 0xd6ba, 0xd6ba, 0xdedb,
-    0xdedb, 0xdefb, 0xdefb, 0xdefb, 0xe71c, 0xe71c, 0xe71c, 0xe73c, 0xe73c, 0xe73c,
-    0xef5d, 0xef5d, 0xef7d, 0xef7d, 0xef7d, 0xf79e, 0xf79e, 0xf79e, 0xf79e, 0xf7be,
-    0xf7be, 0xf7be, 0xf7be, 0xf7be, 0xffdf, 0xffdf, 0xffdf, 0xffdf, 0xffff, 0xffff};
-
-uint16_t test[180] PROGMEM = { // 自定
-    0x0000, 0x0000, 0x0000, 0x0820, 0x0820, 0x0840, 0x1040, 0x1060, 0x1060, 0x1881,
-    0x1881, 0x18A1, 0x20A1, 0x20C1, 0x20C1, 0x28E1, 0x28E1, 0x28E1, 0x3102, 0x3102,
-    0x3922, 0x3922, 0x3942, 0x4142, 0x4162, 0x4162, 0x4982, 0x4983, 0x49A3, 0x51A3,
-    0x51C3, 0x51C3, 0x59C3, 0x59E3, 0x59E3, 0x6204, 0x6204, 0x6A03, 0x69E3, 0x71E3,
-    0x71C3, 0x79C3, 0x79A3, 0x81A3, 0x8983, 0x8983, 0x9162, 0x9162, 0x9962, 0x9942,
-    0xA142, 0xA122, 0xA922, 0xA902, 0xB102, 0xB0E1, 0xB8E1, 0xC0C1, 0xC0C1, 0xC8A1,
-    0xC8A1, 0xD081, 0xD081, 0xD880, 0xD860, 0xE060, 0xE040, 0xE840, 0xE820, 0xF020,
-    0xF800, 0xF800, 0xF800, 0xF820, 0xF840, 0xF860, 0xF8A0, 0xF8C0, 0xF8E0, 0xF900,
-    0xF920, 0xF940, 0xF960, 0xF9A0, 0xF9C0, 0xF9E0, 0xFA00, 0xFA20, 0xFA40, 0xFA80,
-    0xFAA0, 0xFAC0, 0xFAE0, 0xFB00, 0xFB20, 0xFB40, 0xFB80, 0xFBA0, 0xFBC0, 0xFBE0,
-    0xFC00, 0xFC20, 0xFC60, 0xFC80, 0xFCA0, 0xFCC0, 0xFCE0, 0xFD00, 0xFD20, 0xFD40,
-    0xFD40, 0xFD60, 0xFD80, 0xFD80, 0xFDA0, 0xFDC0, 0xFDC0, 0xFDE0, 0xFDE0, 0xFE00,
-    0xFE20, 0xFE20, 0xFE40, 0xFE60, 0xFE60, 0xFE80, 0xFE80, 0xFEA0, 0xFEC0, 0xFEC0,
-    0xFEE0, 0xFF00, 0xFF00, 0xFF20, 0xFF20, 0xFF40, 0xFF60, 0xFF60, 0xFF80, 0xFFA0,
-    0xFFA0, 0xFFC0, 0xFFC0, 0xFFE0, 0xFFE0, 0xFFE1, 0xFFE2, 0xFFE3, 0xFFE4, 0xFFE5,
-    0xFFE6, 0xFFE6, 0xFFE7, 0xFFE8, 0xFFE9, 0xFFEA, 0xFFEB, 0xFFEC, 0xFFED, 0xFFEE,
-    0xFFEE, 0xFFEF, 0xFFF0, 0xFFF1, 0xFFF2, 0xFFF3, 0xFFF4, 0xFFF5, 0xFFF6, 0xFFF6,
-    0xFFF7, 0xFFF8, 0xFFF9, 0xFFFA, 0xFFFB, 0xFFFC, 0xFFFD, 0xFFFE, 0xFFFE, 0xFFFF};
+// 预设
+typedef enum
+{
+  IRON = 0,
+  RAINBOW,
+  COLD,
+  HOT_METAL,
+  MEDICAL,
+  FIRE,
+  ICE_FIRE,
+  BLACK_HOT,
+  WHITE_HOT,
+  HIGH_CONTRAST,
+  OCEAN,
+  VIRIDIS,
+  AMBER,
+  NIGHT_VISION,
+  RAINBOW2,
+  COPPER,
+  PLASMA,
+  INFERNO,
+  MAGMA,
+  GREEN_RED_BLUE,
+  SUNSET,
+  AQUA,
+  FOREST,
+  GOLD,
+  LAVA,
+  NEON,
+  PASTEL,
+  SEPIA,
+  STARRY_NIGHT,
+  VOLCANO,
+  VIRIDIS2,
+  CLASSIC2,
+  HOT2,
+  RAINBOW3,
+  INFERNO2,
+  GREYS_R
+} ColormapPreset;
 
 
+#define COLORMAP_PRESET_COUNT 30
 
+// 全局共享的伽马LUT
+static uint8_t shared_gamma_lut_r[32];
+static uint8_t shared_gamma_lut_g[64];
+static uint8_t shared_gamma_lut_b[32];
+static float current_shared_gamma = 0.0f;
 
-    
+// 伽马值
+static const float preset_gamma[COLORMAP_PRESET_COUNT] = {
+    1.8f, // IRON
+    2.2f, // RAINBOW
+    1.6f, // COLD
+    1.7f, // HOT_METAL
+    2.0f, // MEDICAL
+    2.4f, // FIRE
+    0.7f, // ICE_FIRE yyyyyyyyy
+    1.5f, // BLACK_HOT
+    1.5f, // WHITE_HOT
+    2.6f, // HIGH_CONTRASTxxxxxxxx
+    1.8f, // OCEAN
+    2.0f, // VIRIDIS
+    1.9f, // AMBER
+    2.0f, // NIGHT_VISION
+    1.0f, // RAINBOW2 yyyyyyyyy
+    1.8f, // COPPER
+    2.0f, // PLASMA
+    2.2f, // INFERNO
+    2.1f, // MAGMA
+    2.0f, // GREEN_RED_BLUE
+    2.0f, // SUNSET
+    1.7f, // AQUA
+    1.8f, // FOREST
+    1.9f, // GOLD
+    2.3f, // LAVA
+    2.5f, // NEON
+    1.6f, // PASTEL
+    1.7f, // SEPIA
+    1.8f, // STARRY_NIGHT
+    2.4f, // VOLCANO
+    };
 
+// 名称
+static const char *colormap_names[COLORMAP_PRESET_COUNT] = {
+    "IRON",
+    "RAINBOW",
+    "COLD",
+    "HOT_METAL",
+    "MEDICAL",
+    "FIRE",
+    "ICE_FIRE",
+    "BLACK_HOT",
+    "WHITE_HOT",
+    "HIGH_CONTRAST",
+    "OCEAN",
+    "VIRIDIS",
+    "AMBER",
+    "NIGHT_VISION",
+    "RAINBOW2",
+    "COPPER",
+    "PLASMA",
+    "INFERNO",
+    "MAGMA",
+    "GREEN_RED_BLUE",
+    "SUNSET",
+    "AQUA",
+    "FOREST",
+    "GOLD",
+    "LAVA",
+    "NEON",
+    "PASTEL",
+    "SEPIA",
+    "STARRY_NIGHT",
+    "VOLCANO"};
+
+// 伽马
+void init_shared_gamma_lut(float gamma)
+{
+  if (gamma < 0.01f)
+  {
+    Serial.println("[WARNING] Gamma < 0.01 clamped to 0.01");
+    gamma = 0.01f;
+  }
+  else if (gamma > 20.0f)
+  {
+    Serial.println("[WARNING] Gamma > 20.0 clamped to 20.0");
+    gamma = 20.0f;
+  }
+
+  if (fabsf(gamma - current_shared_gamma) > 0.005f)
+  {
+    for (int i = 0; i < 32; i++)
+    {
+      float norm = i / 31.0f;
+      // 防止NaN
+      if (norm < FLT_MIN)
+        norm = FLT_MIN;
+      shared_gamma_lut_r[i] = (uint8_t)(powf(norm, gamma) * 31 + 0.5f);
+      shared_gamma_lut_b[i] = shared_gamma_lut_r[i];
+    }
+    for (int i = 0; i < 64; i++)
+    {
+      float norm = i / 63.0f;
+      if (norm < FLT_MIN)
+        norm = FLT_MIN;
+      shared_gamma_lut_g[i] = (uint8_t)(powf(norm, gamma) * 63 + 0.5f);
+    }
+    current_shared_gamma = gamma;
+
+    // 打印更新信息
+    char msg[64];
+    snprintf(msg, sizeof(msg), "[Gamma] Updated shared LUT: %.3f", gamma);
+    Serial.println(msg);
+  }
+}
+// 预设
+const ColorKeypoint *get_preset_keypoints(ColormapPreset preset, int *num_keys)
+{
+  static const ColorKeypoint presets[][7] = {
+      // 铁红色 (IRON) - 4点
+      {{0.0f, 0, 0, 0}, {0.3f, 64, 0, 0}, {0.6f, 192, 64, 0}, {1.0f, 255, 192, 64}},
+
+      // 彩虹 (RAINBOW) - 5点
+      {{0.0f, 0, 0, 255}, {0.25f, 0, 255, 255}, {0.5f, 0, 255, 0}, {0.75f, 255, 255, 0}, {1.0f, 255, 0, 0}},
+
+      // 冷色调 (COLD) - 4点
+      {{0.0f, 0, 0, 128}, {0.3f, 0, 64, 255}, {0.7f, 64, 192, 255}, {1.0f, 192, 255, 255}},
+
+      // 热金属 (HOT_METAL) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 128, 0, 0}, {0.5f, 255, 128, 0}, {0.8f, 255, 255, 128}, {1.0f, 255, 255, 255}},
+
+      // 医疗 (MEDICAL) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 0, 0, 128}, {0.5f, 0, 192, 0}, {0.8f, 255, 255, 0}, {1.0f, 255, 128, 128}},
+
+      // 火焰 (FIRE) - 5点
+      {{0.0f, 0, 0, 0}, {0.3f, 128, 0, 0}, {0.6f, 255, 128, 0}, {0.9f, 255, 255, 0}, {1.0f, 255, 255, 255}},
+
+      // 冰火 (ICE_FIRE) - 5点 0.5-0.7OK
+      {{0.0f, 0, 0, 128}, {0.3f, 0, 128, 255}, {0.5f, 0, 0, 0}, {0.7f, 255, 128, 0}, {1.0f, 255, 255, 192}},
+
+      // 黑热 (BLACK_HOT) - 4点
+      {{0.0f, 255, 255, 255}, {0.3f, 128, 128, 128}, {0.7f, 64, 64, 64}, {1.0f, 0, 0, 0}},
+
+      // 白热 (WHITE_HOT) - 4点
+      {{0.0f, 0, 0, 0}, {0.3f, 64, 64, 64}, {0.7f, 128, 128, 128}, {1.0f, 255, 255, 255}},
+
+      // 高对比度 (HIGH_CONTRAST) - 4点
+      {{0.0f, 0, 0, 255}, {0.4f, 255, 0, 0}, {0.6f, 255, 0, 0}, {1.0f, 255, 255, 0}},
+
+      // 海洋蓝调 (OCEAN) - 4点
+      {{0.0f, 0, 0, 64}, {0.3f, 0, 64, 128}, {0.6f, 0, 128, 192}, {1.0f, 0, 192, 255}},
+
+      // 科学可视化 (VIRIDIS) - 5点
+      {{0.0f, 68, 1, 84}, {0.25f, 59, 82, 139}, {0.5f, 33, 145, 140}, {0.75f, 94, 201, 98}, {1.0f, 253, 231, 37}},
+
+      // 琥珀色 (AMBER) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 64, 32, 0}, {0.5f, 192, 96, 0}, {0.8f, 255, 192, 64}, {1.0f, 255, 255, 192}},
+
+      // 夜视绿 (NIGHT_VISION) - 5点
+      {{0.0f, 0, 0, 0}, {0.1f, 0, 8, 0}, {0.4f, 0, 64, 0}, {0.8f, 32, 192, 32}, {1.0f, 192, 255, 192}},
+
+      // 增强彩虹 (RAINBOW2) - 7点
+      {{0.0f, 0, 0, 128}, {0.2f, 0, 0, 255}, {0.4f, 0, 128, 255}, {0.6f, 0, 255, 128}, {0.7f, 255, 255, 0}, {0.9f, 255, 128, 0}, {1.0f, 255, 0, 0}},
+
+      // 铜色调 (COPPER) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 64, 32, 0}, {0.5f, 160, 80, 0}, {0.8f, 220, 160, 32}, {1.0f, 255, 220, 128}},
+
+      // 等离子体 (PLASMA) - 5点
+      {{0.0f, 13, 8, 135}, {0.25f, 75, 3, 161}, {0.5f, 190, 23, 115}, {0.75f, 240, 90, 32}, {1.0f, 248, 220, 20}},
+
+      // 地狱火 (INFERNO) - 5点
+      {{0.0f, 0, 0, 4}, {0.25f, 60, 5, 80}, {0.5f, 150, 30, 15}, {0.75f, 230, 100, 10}, {1.0f, 252, 255, 164}},
+
+      // 岩浆 (MAGMA) - 5点
+      {{0.0f, 0, 0, 4}, {0.25f, 60, 15, 110}, {0.5f, 140, 30, 150}, {0.75f, 210, 80, 100}, {1.0f, 252, 220, 200}},
+
+      // 绿-红-蓝 (GREEN_RED_BLUE) - 5点
+      {{0.0f, 0, 128, 0}, {0.25f, 0, 255, 0}, {0.5f, 255, 255, 0}, {0.75f, 255, 0, 0}, {1.0f, 0, 0, 255}},
+
+      // 日落 (SUNSET) - 5点
+      {{0.0f, 40, 10, 100}, {0.25f, 120, 50, 150}, {0.5f, 220, 100, 50}, {0.75f, 240, 180, 30}, {1.0f, 255, 220, 180}},
+
+      // 水色 (AQUA) - 4点
+      {{0.0f, 10, 20, 50}, {0.3f, 50, 100, 150}, {0.7f, 100, 200, 220}, {1.0f, 180, 240, 255}},
+
+      // 森林 (FOREST) - 5点
+      {{0.0f, 0, 20, 0}, {0.25f, 0, 80, 0}, {0.5f, 50, 120, 30}, {0.75f, 150, 180, 50}, {1.0f, 220, 255, 180}},
+
+      // 金色 (GOLD) - 4点
+      {{0.0f, 20, 10, 0}, {0.3f, 120, 80, 0}, {0.7f, 200, 160, 30}, {1.0f, 255, 220, 100}},
+
+      // 熔岩 (LAVA) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 80, 0, 0}, {0.5f, 200, 60, 0}, {0.8f, 255, 150, 30}, {1.0f, 255, 255, 180}},
+
+      // 霓虹 (NEON) - 6点
+      {{0.0f, 0, 0, 0}, {0.2f, 0, 0, 255}, {0.4f, 0, 255, 255}, {0.6f, 0, 255, 0}, {0.8f, 255, 255, 0}, {1.0f, 255, 0, 255}},
+
+      // 柔和 (PASTEL) - 5点
+      {{0.0f, 150, 200, 255}, {0.25f, 200, 150, 255}, {0.5f, 255, 200, 150}, {0.75f, 255, 255, 200}, {1.0f, 200, 255, 200}},
+
+      // 棕褐色 (SEPIA) - 4点
+      {{0.0f, 30, 20, 10}, {0.3f, 100, 70, 40}, {0.7f, 180, 140, 90}, {1.0f, 240, 220, 180}},
+
+      // 星空 (STARRY_NIGHT) - 5点
+      {{0.0f, 0, 0, 30}, {0.2f, 10, 10, 80}, {0.5f, 50, 30, 150}, {0.8f, 150, 100, 200}, {1.0f, 220, 220, 255}},
+
+      // 火山 (VOLCANO) - 5点
+      {{0.0f, 0, 0, 0}, {0.2f, 80, 0, 0}, {0.4f, 180, 40, 0}, {0.7f, 220, 100, 20}, {1.0f, 255, 200, 100}},
+
+  };
+
+  // 设置每种预设的关键点数量
+  static const int key_counts[COLORMAP_PRESET_COUNT] = {
+      4, 5, 4, 5, 5, // IRON, RAINBOW, COLD, HOT_METAL, MEDICAL
+      5, 5, 4, 4, 4, // FIRE, ICE_FIRE, BLACK_HOT, WHITE_HOT, HIGH_CONTRAST
+      4, 5, 5, 5, 7, // OCEAN, VIRIDIS, AMBER, NIGHT_VISION, RAINBOW2
+      5, 5, 5, 5, 5, // COPPER, PLASMA, INFERNO, MAGMA, GREEN_RED_BLUE
+      5, 4, 5, 4, 5, // SUNSET, AQUA, FOREST, GOLD, LAVA
+      6, 5, 4, 5, 5, // NEON, PASTEL, SEPIA, STARRY_NIGHT, VOLCANO
+      };
+
+  *num_keys = key_counts[preset];
+  return presets[preset];
+}
+
+// 获取预设的推荐伽马值
+float get_preset_gamma(ColormapPreset preset)
+{
+  if (preset >= 0 && preset < COLORMAP_PRESET_COUNT)
+  {
+    return preset_gamma[preset];
+  }
+  return 2.2f; // 默认值
+}
+
+// 获取调色板名称
+const char *get_colormap_name(ColormapPreset preset)
+{
+  if (preset >= 0 && preset < COLORMAP_PRESET_COUNT)
+  {
+    return colormap_names[preset];
+  }
+  return "UNKNOWN";
+}
+
+void generate_colormap(uint16_t colormap[color_num], ColormapPreset preset, float gamma)
+{
+  init_shared_gamma_lut(gamma);
+
+  int num_keys;
+  const ColorKeypoint *keys = get_preset_keypoints(preset, &num_keys);
+
+  for (int i = 0; i < color_num; i++)
+  {
+    float pos = i / (color_num_f - 1);
+    int start_idx = 0, end_idx = num_keys - 1;
+    for (int k = 0; k < num_keys - 1; k++)
+    {
+      if (pos >= keys[k].pos && pos <= keys[k + 1].pos)
+      {
+        start_idx = k;
+        end_idx = k + 1;
+        break;
+      }
+    }
+    float segment_length = keys[end_idx].pos - keys[start_idx].pos;
+    float t = (segment_length > 0.0001f) ? (pos - keys[start_idx].pos) / segment_length : 0.0f;
+
+    // 平滑
+    t = t * t * (3.0f - 2.0f * t);
+    uint8_t r = (uint8_t)(keys[start_idx].r + t * (keys[end_idx].r - keys[start_idx].r));
+    uint8_t g = (uint8_t)(keys[start_idx].g + t * (keys[end_idx].g - keys[start_idx].g));
+    uint8_t b = (uint8_t)(keys[start_idx].b + t * (keys[end_idx].b - keys[start_idx].b));
+
+    uint8_t r5 = shared_gamma_lut_r[r >> 3]; 
+    uint8_t g6 = shared_gamma_lut_g[g >> 2]; 
+    uint8_t b5 = shared_gamma_lut_b[b >> 3]; 
+
+    colormap[i] = (r5 << 11) | (g6 << 5) | b5;
+  }
+}
+
+ColormapPreset current_preset = RAINBOW2;
+float current_gamma = 2.2f;
+bool use_preset_gamma = true; // 是否使用预设伽马值
 
 static LV_ATTRIBUTE_MEM_ALIGN lv_color_t canvas2_buf[2 * 240] __attribute__((aligned(4)));
 void ColorMap_init()
@@ -162,14 +357,12 @@ void ColorMap_init()
 void showCan_2()
 {
   uint16_t *buf_raw2 = reinterpret_cast<uint16_t *>(canvas2_buf);
-
-  // 预计算每行的颜色值（共240行）
   uint16_t row_colors[240];
   for (int y = 0; y < 240; y++)
   {
-    uint16_t color_index = (y * 179) / 239; // 将行索引映射到颜色索引
-    if (color_index >= 180)
-      color_index = 179;
+    uint16_t color_index = (y * (color_num - 1)) / 239; 
+    if (color_index >= color_num)
+      color_index = color_num - 1;
     row_colors[y] = colormap[color_index];
   }
   // 竖向填充：每行写入2个相同颜色的像素
@@ -181,44 +374,136 @@ void showCan_2()
   lv_obj_invalidate(objects.can_2);
 }
 
-// 定义颜色映射表指针数组
-static const uint16_t *const colormaps[] = {
-    classic, // COLORMAP_CLASSIC
-    turbo,   // COLORMAP_TURBO
-    hot,     // COLORMAP_HOT
-    viridis, // COLORMAP_VIRIDIS
-    inferno, // COLORMAP_INFERNO
-    greys_r, // COLORMAP_GRAYSR
-    test    // test
-};
-
-
-
-// 计算映射表数量
-constexpr int COLORMAP_COUNT = sizeof(colormaps) / sizeof(colormaps[0]);
-
-// 根据索引从程序存储器中复制数据到静态数组
-void load_colormap(uint8_t index)
+// 加载当前调色板
+void load_colormap()
 {
+  // 如果使用预设伽马值，则获取当前预设的推荐值
+  float gamma = use_preset_gamma ? get_preset_gamma(current_preset) : current_gamma;
   {
     LockGuard lock(cmap_loading_lock);
-    // 边界检查并选择映射表
-    const uint16_t *selected_map = (index >= 0 && index < COLORMAP_COUNT) ? colormaps[index] : classic; // 默认映射
-    // 复制到目标缓冲区
-    memcpy_P(colormap, selected_map, sizeof(colormap));
-    showCan_2();
+    generate_colormap(colormap, current_preset, gamma);
   }
-}
-void next_cmap()
-{
-  cmap_now_choose = (cmap_now_choose + 1) % COLORMAP_COUNT;
-  load_colormap(cmap_now_choose);
+  current_gamma = gamma;
+
+  showCan_2();
+  // 打印调色板信息
+  char msg[128];
+  snprintf(msg, sizeof(msg), "Loaded colormap: %s, Gamma: %.2f (%s)",
+           get_colormap_name(current_preset),
+           gamma,
+           use_preset_gamma ? "preset" : "custom");
+  Serial.println(msg);
 }
 
-void priv_cmap()
+void load_colormap(uint8_t index)
 {
-  cmap_now_choose = (cmap_now_choose + COLORMAP_COUNT - 1) % COLORMAP_COUNT;
-  load_colormap(cmap_now_choose);
+  current_preset = (ColormapPreset)index;
+  load_colormap();
+}
+
+// 获取当前调色板名称
+const char *get_current_colormap_name()
+{
+  return get_colormap_name(current_preset);
+}
+
+// 下一个调色板方案
+void next_cmap()
+{
+  int next = (int)current_preset + 1;
+  if (next >= COLORMAP_PRESET_COUNT)
+    next = 0;
+  current_preset = (ColormapPreset)next;
+
+  use_preset_gamma = true;
+  load_colormap();
+}
+
+// 上一个调色板方案
+void prev_cmap()
+{
+  int prev = (int)current_preset - 1;
+  if (prev < 0)
+    prev = COLORMAP_PRESET_COUNT - 1;
+  current_preset = (ColormapPreset)prev;
+
+  use_preset_gamma = true;
+  load_colormap();
+}
+// 设置伽马值
+void set_gamma(float gamma)
+{
+  char msg[64];
+  snprintf(msg, sizeof(msg), "[Gamma] Set custom: %.3f", gamma);
+  Serial.println(msg);
+
+  current_gamma = gamma;
+  use_preset_gamma = false;
+  load_colormap();
+}
+
+// 增加伽马值
+void increase_gamma(float step = 0.1f)
+{
+  set_gamma(current_gamma + step);
+}
+
+// 减少伽马值
+void decrease_gamma(float step = 0.1f)
+{
+  set_gamma(current_gamma - step);
+}
+
+static const float GAMMA_MIN = 0.1f;
+static const float GAMMA_MAX = 10.0f;
+static const float SENSITIVITY = 0.01f; // 每像素调整量
+
+// 伽马控制回调函数
+static void gamma_ctrl_cb(lv_event_t *e)
+{
+  lv_event_code_t code = lv_event_get_code(e);
+  lv_indev_t *indev = lv_indev_get_act();
+  if (!indev)
+    return;
+
+  lv_point_t point;
+  lv_indev_get_point(indev, &point);
+
+  static lv_point_t last_point;
+  static float start_gamma; // 用于记录开始滑动时的伽马值
+  switch (code)
+  {
+  case LV_EVENT_PRESSED:
+    last_point = point;
+    start_gamma = current_gamma; // 记录开始值
+    break;
+
+  case LV_EVENT_PRESSING:
+  {
+    int32_t dy = point.y - last_point.y;
+    if (abs(dy) > 1)
+    { // 最小移动
+      // 根据移动距离调整伽马值（向上滑动减小，向下滑动增加）
+      current_gamma = start_gamma - (dy * SENSITIVITY);
+      // 限制伽马值范围
+      current_gamma = current_gamma < GAMMA_MIN ? GAMMA_MIN : (current_gamma > GAMMA_MAX ? GAMMA_MAX : current_gamma);
+      // 更新系统伽马值
+      set_gamma(current_gamma);
+      last_point = point;
+    }
+    break;
+  }
+  case LV_EVENT_RELEASED:
+    // 释放后
+    break;
+  }
+}
+
+void touch_gamma_init()
+{
+  lv_obj_add_event_cb(objects.panel_gamma_set, gamma_ctrl_cb, LV_EVENT_PRESSED, NULL);
+  lv_obj_add_event_cb(objects.panel_gamma_set, gamma_ctrl_cb, LV_EVENT_PRESSING, NULL);
+  lv_obj_add_event_cb(objects.panel_gamma_set, gamma_ctrl_cb, LV_EVENT_RELEASED, NULL);
 }
 
 #endif

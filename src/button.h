@@ -5,6 +5,7 @@
 #include <lvgl.h>
 #include "shared_val.h"
 #include "pic_manage.h"
+#include "colormap.h"
 
 // 按键时间阈值定义 (毫秒)
 #define DEBOUNCE_TIME 30    // 消抖时间
@@ -314,7 +315,7 @@ private:
     }
     else
     {
-
+      next_cmap();
     }
   }
 

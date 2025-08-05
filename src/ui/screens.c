@@ -53,7 +53,7 @@ void create_screen_main() {
             // t_4
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.t_4 = obj;
-            lv_obj_set_pos(obj, 245, 180);
+            lv_obj_set_pos(obj, 245, 176);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "Turb");
@@ -104,6 +104,25 @@ void create_screen_main() {
             lv_obj_set_pos(obj, 245, 136);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_label_set_text(obj, "EMSI");
+        }
+        {
+            // panel_gamma_set
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            objects.panel_gamma_set = obj;
+            lv_obj_set_pos(obj, 241, 0);
+            lv_obj_set_size(obj, 40, 240);
+            lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_outline_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+        }
+        {
+            // label_gamma
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.label_gamma = obj;
+            lv_obj_set_pos(obj, 245, 192);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_label_set_text(obj, "Gam");
         }
     }
     

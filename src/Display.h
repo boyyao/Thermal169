@@ -237,8 +237,8 @@ void data_pixel_to_draw_pixel_in_pic(unsigned short data[GRID_SIZE][GRID_SIZE], 
     {
       //Serial.println(new_data_pixel[i][j]);
       // 拷贝温度信息, 并提前映射到色彩空间中
-      value = (180 * (new_data_pixel[i][j] - temp_T_min) / (temp_T_max - temp_T_min));
-      if (value < 180)
+      value = (color_num * (new_data_pixel[i][j] - temp_T_min) / (temp_T_max - temp_T_min));
+      if (value < color_num)
       {
         draw_pixel[i][j] = value;
       }
@@ -268,7 +268,7 @@ void data_pixel_to_draw_pixel(unsigned short data[GRID_SIZE][GRID_SIZE])
 
   // 预先计算常量值
   const int range = T_max - T_min;
-  const float scale_factor = (range != 0) ? (180.0f / range) : 0;
+  const float scale_factor = (range != 0) ? (color_num_f / range) : 0;
 
   // 使用指针
   uint16_t *pixel_ptr = reinterpret_cast<uint16_t *>(&draw_pixel[0][0]);
@@ -284,10 +284,10 @@ void data_pixel_to_draw_pixel(unsigned short data[GRID_SIZE][GRID_SIZE])
     float val3 = (static_cast<int>(data_ptr[i + 3]) - T_min) * scale_factor;
 
     // 饱和处理并转换类型
-    pixel_ptr[i] = static_cast<uint16_t>((val0 < 180.0f) ? val0 : 180.0f);
-    pixel_ptr[i + 1] = static_cast<uint16_t>((val1 < 180.0f) ? val1 : 180.0f);
-    pixel_ptr[i + 2] = static_cast<uint16_t>((val2 < 180.0f) ? val2 : 180.0f);
-    pixel_ptr[i + 3] = static_cast<uint16_t>((val3 < 180.0f) ? val3 : 180.0f);
+    pixel_ptr[i] = static_cast<uint16_t>((val0 < color_num_f) ? val0 : color_num_f);
+    pixel_ptr[i + 1] = static_cast<uint16_t>((val1 < color_num_f) ? val1 : color_num_f);
+    pixel_ptr[i + 2] = static_cast<uint16_t>((val2 < color_num_f) ? val2 : color_num_f);
+    pixel_ptr[i + 3] = static_cast<uint16_t>((val3 < color_num_f) ? val3 : color_num_f);
   }
   // for (int i = 0; i < 32; i++)
   // {
@@ -307,6 +307,12 @@ void data_pixel_to_draw_pixel(unsigned short data[GRID_SIZE][GRID_SIZE])
     // 应用映射值卡尔曼滤波
     mappedValueFilter.processFrame(draw_pixel);
   }
+
+
+
+
+
+
 }
 
 
@@ -358,17 +364,25 @@ void Display_loop()
 
     // snprintf(label_buf, sizeof(label_buf), "%s", ColorMapNames[cmap_now_choose]);
     // lv_label_set_text(objects.t_4, label_buf);
-    lv_label_set_text_fmt(objects.t_4, "%s", ColorMapNames[cmap_now_choose]);
+    lv_label_set_text_fmt(objects.t_4, "%s", get_current_colormap_name());
 
     snprintf(label_buf, sizeof(label_buf), "%5.1f", ft_point);
     lv_label_set_text(objects.t_5, label_buf);
     // lv_label_set_text_fmt(objects.t_5, "%5.1f", ft_point);
+
+    snprintf(label_buf, sizeof(label_buf), "%5.1f", current_gamma);
+    lv_label_set_text(objects.label_gamma, label_buf);
+
+
 
     if (flag_show_cursor)
       draw_cross_and_temp(ft_point, test_point[0], test_point[1], -1);
 
     if (flag_trace_max)
       draw_cross_and_temp(ft_max, (x_max * 15 + 1) >> 1, ((31 - y_max) * 15 + 1) >> 1, -1);
+
+    if (flag_trace_min)
+      draw_cross_and_temp(ft_max, (x_min * 15 + 1) >> 1, ((31 - y_min) * 15 + 1) >> 1, -1);
   }
 }
 

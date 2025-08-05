@@ -36,7 +36,7 @@ void eeprom_save_config()
 	EEPROM.write(2, (uint8_t)use_kalman_model);		// 卡尔曼模型
 	EEPROM.write(3, (uint8_t)interpolation_method); // 双线性滤波精度
 	EEPROM.write(4, use_sfilter);					// 平滑滤波
-	EEPROM.write(5, cmap_now_choose);
+	EEPROM.write(5, current_preset);
 	EEPROM.write(6, flag_show_temp_text); // 成像图显示温度
 	EEPROM.write(7, flag_trace_max);	  // 是否追踪热点
 	EEPROM.commit();
@@ -56,15 +56,15 @@ void load_settings()
 		use_kalman_model = EEPROM.read(2);
 		interpolation_method = EEPROM.read(3);
 		use_sfilter = EEPROM.read(4) != 0;
-		cmap_now_choose = EEPROM.read(5);
-		if (cmap_now_choose > 6)
+		current_preset = (ColormapPreset)EEPROM.read(5);
+		if (current_preset > COLORMAP_PRESET_COUNT)
 		{
-			cmap_now_choose = COLORMAP_TURBO;
+			current_preset = RAINBOW2;
 		}
 		flag_show_temp_text = EEPROM.read(6) != 0;
 		flag_trace_max = EEPROM.read(7) != 0;
 	}
-	load_colormap(cmap_now_choose);
+	load_colormap(current_preset);
 	update_settingsUI();
 }
 

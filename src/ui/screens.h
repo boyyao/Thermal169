@@ -18,6 +18,8 @@ typedef struct _objects_t {
     lv_obj_t *t_5;
     lv_obj_t *can_2;
     lv_obj_t *label_bat;
+    lv_obj_t *panel_gamma_set;
+    lv_obj_t *label_gamma;
     lv_obj_t *epsilon;
     lv_obj_t *bil_method;
     lv_obj_t *kalman_method;
