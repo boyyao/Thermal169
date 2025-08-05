@@ -140,6 +140,7 @@ void setup()
   touch_gamma_init();
 
   FATFS_init();
+  load_correction_from_file("calib.txt");
   Serial.println("Setup done");
 }
 

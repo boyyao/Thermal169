@@ -30,7 +30,6 @@
 
 #define MLX_SDA 12
 #define MLX_SCL 13
-uint8_t x_max, y_max, x_min, y_min;
 
 // STRUCT WITH ALL SENSOR CHARACTERISTICS
 struct characteristics
@@ -448,207 +447,109 @@ void pixel_masking()
 void calculate_pixel_temp()
 {
   int64_t vij_pixc_and_pcscaleval;
+  int64_t pixcij;
+  int64_t vdd_calc_steps;
   uint16_t table_row, table_col;
   int32_t vx, vy, ydist, dta;
   signed long pixel;
-  pixc2 = pixc2_0;
+  pixc2 = pixc2_0; // set pointer to start address of the allocated heap
 
-  // 预计算不变值
-  for (int i = 0; i < NROFTAELEMENTS; i++) {
-    if (Ta > XTATemps[i]) table_col = i;
+  /******************************************************************************************************************
+    step 0: find column of lookup table
+  ******************************************************************************************************************/
+  for (int i = 0; i < NROFTAELEMENTS; i++)
+  {
+    if (Ta > XTATemps[i])
+    {
+      table_col = i;
+    }
   }
   dta = Ta - XTATemps[table_col];
   ydist = (int32_t)ADEQUIDISTANCE;
 
-  bool extreme_value = false;
-  uint32_t sum_temp = 0;
-  uint16_t valid_pixels = 0;
+  for (int m = 0; m < DevConst.PixelPerColumn; m++)
+  {
+    for (int n = 0; n < DevConst.PixelPerRow; n++)
+    {
 
-  for (int m = 0; m < DevConst.PixelPerColumn; m++) {
-    const bool is_top_half = (m < DevConst.PixelPerColumn / 2);
-    const uint8_t block_row = m % DevConst.RowPerBlock;
-    
-    for (int n = 0; n < DevConst.PixelPerRow; n++) {
+      /******************************************************************************************************************
+         step 1: use a variable with bigger data format for the compensation steps
+       ******************************************************************************************************************/
       pixel = (signed long)data_pixel[m][n];
 
-      // 热补偿
-      pixel -= ((int32_t)thgrad[m][n] * (int32_t)ptat_av_uint16) / gradscale_div;
+      /******************************************************************************************************************
+         step 2: compensate thermal drifts (see datasheet, chapter: Thermal Offset)
+       ******************************************************************************************************************/
+      pixel -= (int32_t)(((int32_t)thgrad[m][n] * (int32_t)ptat_av_uint16) / (int32_t)gradscale_div);
       pixel -= (int32_t)thoffset[m][n];
 
-      // 电补偿
-      pixel -= is_top_half ? 
-               eloffset[block_row][n] : 
-               eloffset[block_row + DevConst.RowPerBlock][n];
+      /******************************************************************************************************************
+         step 3: compensate electrical offset (see datasheet, chapter: Electrical Offset)
+       ******************************************************************************************************************/
+      if (m < DevConst.PixelPerColumn / 2)
+      { // top half
+        pixel -= eloffset[m % DevConst.RowPerBlock][n];
+      }
+      else
+      { // bottom half
+        pixel -= eloffset[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
+      }
 
-      // VDD补偿
-      const int vddcompgrad_val = is_top_half ?
-        vddcompgrad[block_row][n] : 
-        vddcompgrad[block_row + DevConst.RowPerBlock][n];
-      
-      const int vddcompoff_val = is_top_half ?
-        vddcompoff[block_row][n] :
-        vddcompoff[block_row + DevConst.RowPerBlock][n];
-      
-      int64_t vdd_calc_steps = vddcompgrad_val * ptat_av_uint16;
-      vdd_calc_steps = vdd_calc_steps / vddscgrad_div + vddcompoff_val;
-      vdd_calc_steps *= (vdd_av_uint16 - vddth1 - 
-                        ((vddth2 - vddth1) * (ptat_av_uint16 - ptatth1)) / 
-                        (ptatth2 - ptatth1));
-      vdd_calc_steps /= vddscoff_div;
+      /******************************************************************************************************************
+         step 4: compensate vdd (see datasheet, chapter: Vdd Compensation)
+       ******************************************************************************************************************/
+      // first select VddCompGrad and VddCompOff for pixel m,n:
+      if (m < DevConst.PixelPerColumn / 2)
+      { // top half
+        vddcompgrad_n = vddcompgrad[m % DevConst.RowPerBlock][n];
+        vddcompoff_n = vddcompoff[m % DevConst.RowPerBlock][n];
+      }
+      else
+      { // bottom half
+        vddcompgrad_n = vddcompgrad[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
+        vddcompoff_n = vddcompoff[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
+      }
+      // now do the vdd calculation
+      vdd_calc_steps = vddcompgrad_n * ptat_av_uint16;
+      vdd_calc_steps = vdd_calc_steps / vddscgrad_div;
+      vdd_calc_steps = vdd_calc_steps + vddcompoff_n;
+      vdd_calc_steps = vdd_calc_steps * (vdd_av_uint16 - vddth1 - ((vddth2 - vddth1) / (ptatth2 - ptatth1)) * (ptat_av_uint16 - ptatth1));
+      vdd_calc_steps = vdd_calc_steps / vddscoff_div;
       pixel -= vdd_calc_steps;
 
-      // 灵敏度补偿
+      /******************************************************************************************************************
+         step 5: multiply sensitivity coeff for each pixel (see datasheet, chapter: Object Temperature)
+       ******************************************************************************************************************/
       vij_pixc_and_pcscaleval = pixel * (int64_t)PCSCALEVAL;
-      pixel = (int32_t)(vij_pixc_and_pcscaleval / *pixc2++);
+      pixel = (int32_t)(vij_pixc_and_pcscaleval / *pixc2);
+      pixc2++;
+      /******************************************************************************************************************
+         step 6: find correct temp for this sensor in lookup table and do a bilinear interpolation (see datasheet, chapter:  Look-up table)
+       ******************************************************************************************************************/
+      table_row = pixel + TABLEOFFSET;
+      table_row = table_row >> ADEXPBITS;
+      // bilinear interpolation
+      vx = ((((int32_t)TempTable[table_row][table_col + 1] - (int32_t)TempTable[table_row][table_col]) * (int32_t)dta) / (int32_t)TAEQUIDISTANCE) + (int32_t)TempTable[table_row][table_col];
+      vy = ((((int32_t)TempTable[table_row + 1][table_col + 1] - (int32_t)TempTable[table_row + 1][table_col]) * (int32_t)dta) / (int32_t)TAEQUIDISTANCE) + (int32_t)TempTable[table_row + 1][table_col];
+      pixel = (uint32_t)((vy - vx) * ((int32_t)(pixel + TABLEOFFSET) - (int32_t)YADValues[table_row]) / ydist + (int32_t)vx);
 
-      // 温度查找表
-      table_row = (pixel + TABLEOFFSET) >> ADEXPBITS;
-      vx = TempTable[table_row][table_col] + 
-           ((TempTable[table_row][table_col+1] - TempTable[table_row][table_col]) * dta) / TAEQUIDISTANCE;
-      vy = TempTable[table_row+1][table_col] + 
-           ((TempTable[table_row+1][table_col+1] - TempTable[table_row+1][table_col]) * dta) / TAEQUIDISTANCE;
-      pixel = vx + ((vy - vx) * ((pixel + TABLEOFFSET) - YADValues[table_row])) / ydist;
-
-      // 全局偏移
+      /******************************************************************************************************************
+         step 7: add GlobalOffset (stored as signed char)
+       ******************************************************************************************************************/
       pixel += globaloff;
+
+      /******************************************************************************************************************
+        step 8: overwrite the uncompensate pixel with the new calculated compensated value
+      ******************************************************************************************************************/
       data_pixel[m][n] = (unsigned short)pixel;
 
-      // 温度统计 (只计算中心区域)
-      if (n >= 2 && n < 30 && m >= 2 && m < 30) {
-        if (!extreme_value) {
-          T_min = T_max = T_avg = pixel;
-          extreme_value = true;
-        } else {
-          if (pixel < T_min) {
-            T_min = pixel;
-            x_min = n;
-            y_min = m;
-          }
-          if (pixel > T_max) {
-            T_max = pixel;
-            x_max = n;
-            y_max = m;
-          }
-          sum_temp += pixel;
-          valid_pixels++;
-        }
-      }
     }
   }
-  
-  if (valid_pixels > 0) {
-    T_avg = sum_temp / valid_pixels;
-  }
-  
+
+  /******************************************************************************************************************
+    step 8: overwrite the uncompensate pixel with the new calculated compensated value
+  ******************************************************************************************************************/
   pixel_masking();
-
-
-
-  // 原版本
-  // int64_t vij_pixc_and_pcscaleval;
-  // int64_t pixcij;
-  // int64_t vdd_calc_steps;
-  // uint16_t table_row, table_col;
-  // int32_t vx, vy, ydist, dta;
-  // signed long pixel;
-  // pixc2 = pixc2_0; // set pointer to start address of the allocated heap
-
-  // /******************************************************************************************************************
-  //   step 0: find column of lookup table
-  // ******************************************************************************************************************/
-  // for (int i = 0; i < NROFTAELEMENTS; i++)
-  // {
-  //   if (Ta > XTATemps[i])
-  //   {
-  //     table_col = i;
-  //   }
-  // }
-  // dta = Ta - XTATemps[table_col];
-  // ydist = (int32_t)ADEQUIDISTANCE;
-
-  // for (int m = 0; m < DevConst.PixelPerColumn; m++)
-  // {
-  //   for (int n = 0; n < DevConst.PixelPerRow; n++)
-  //   {
-
-  //     /******************************************************************************************************************
-  //        step 1: use a variable with bigger data format for the compensation steps
-  //      ******************************************************************************************************************/
-  //     pixel = (signed long)data_pixel[m][n];
-
-  //     /******************************************************************************************************************
-  //        step 2: compensate thermal drifts (see datasheet, chapter: Thermal Offset)
-  //      ******************************************************************************************************************/
-  //     pixel -= (int32_t)(((int32_t)thgrad[m][n] * (int32_t)ptat_av_uint16) / (int32_t)gradscale_div);
-  //     pixel -= (int32_t)thoffset[m][n];
-
-  //     /******************************************************************************************************************
-  //        step 3: compensate electrical offset (see datasheet, chapter: Electrical Offset)
-  //      ******************************************************************************************************************/
-  //     if (m < DevConst.PixelPerColumn / 2)
-  //     { // top half
-  //       pixel -= eloffset[m % DevConst.RowPerBlock][n];
-  //     }
-  //     else
-  //     { // bottom half
-  //       pixel -= eloffset[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
-  //     }
-
-  //     /******************************************************************************************************************
-  //        step 4: compensate vdd (see datasheet, chapter: Vdd Compensation)
-  //      ******************************************************************************************************************/
-  //     // first select VddCompGrad and VddCompOff for pixel m,n:
-  //     if (m < DevConst.PixelPerColumn / 2)
-  //     { // top half
-  //       vddcompgrad_n = vddcompgrad[m % DevConst.RowPerBlock][n];
-  //       vddcompoff_n = vddcompoff[m % DevConst.RowPerBlock][n];
-  //     }
-  //     else
-  //     { // bottom half
-  //       vddcompgrad_n = vddcompgrad[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
-  //       vddcompoff_n = vddcompoff[m % DevConst.RowPerBlock + DevConst.RowPerBlock][n];
-  //     }
-  //     // now do the vdd calculation
-  //     vdd_calc_steps = vddcompgrad_n * ptat_av_uint16;
-  //     vdd_calc_steps = vdd_calc_steps / vddscgrad_div;
-  //     vdd_calc_steps = vdd_calc_steps + vddcompoff_n;
-  //     vdd_calc_steps = vdd_calc_steps * (vdd_av_uint16 - vddth1 - ((vddth2 - vddth1) / (ptatth2 - ptatth1)) * (ptat_av_uint16 - ptatth1));
-  //     vdd_calc_steps = vdd_calc_steps / vddscoff_div;
-  //     pixel -= vdd_calc_steps;
-
-  //     /******************************************************************************************************************
-  //        step 5: multiply sensitivity coeff for each pixel (see datasheet, chapter: Object Temperature)
-  //      ******************************************************************************************************************/
-  //     vij_pixc_and_pcscaleval = pixel * (int64_t)PCSCALEVAL;
-  //     pixel = (int32_t)(vij_pixc_and_pcscaleval / *pixc2);
-  //     pixc2++;
-  //     /******************************************************************************************************************
-  //        step 6: find correct temp for this sensor in lookup table and do a bilinear interpolation (see datasheet, chapter:  Look-up table)
-  //      ******************************************************************************************************************/
-  //     table_row = pixel + TABLEOFFSET;
-  //     table_row = table_row >> ADEXPBITS;
-  //     // bilinear interpolation
-  //     vx = ((((int32_t)TempTable[table_row][table_col + 1] - (int32_t)TempTable[table_row][table_col]) * (int32_t)dta) / (int32_t)TAEQUIDISTANCE) + (int32_t)TempTable[table_row][table_col];
-  //     vy = ((((int32_t)TempTable[table_row + 1][table_col + 1] - (int32_t)TempTable[table_row + 1][table_col]) * (int32_t)dta) / (int32_t)TAEQUIDISTANCE) + (int32_t)TempTable[table_row + 1][table_col];
-  //     pixel = (uint32_t)((vy - vx) * ((int32_t)(pixel + TABLEOFFSET) - (int32_t)YADValues[table_row]) / ydist + (int32_t)vx);
-
-  //     /******************************************************************************************************************
-  //        step 7: add GlobalOffset (stored as signed char)
-  //      ******************************************************************************************************************/
-  //     pixel += globaloff;
-
-  //     /******************************************************************************************************************
-  //       step 8: overwrite the uncompensate pixel with the new calculated compensated value
-  //     ******************************************************************************************************************/
-  //     data_pixel[m][n] = (unsigned short)pixel;
-
-  //   }
-  // }
-
-  // /******************************************************************************************************************
-  //   step 8: overwrite the uncompensate pixel with the new calculated compensated value
-  // ******************************************************************************************************************/
-  // pixel_masking();
 }
 
 //不使用定时器可以不用计算~

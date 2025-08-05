@@ -15,6 +15,7 @@
 #include "kalman_mapped_temp.h"
 #include "logo_jpg.h"
 #include <TJpg_Decoder.h>
+#include "calibrate_thermal_sensor.h"
 // 全局滤波器实例
 //KalmanFilterRawUShort rawTempFilter;        // 用于原始温度
 KalmanFilterMappedUShort mappedValueFilter; // 用于映射值
@@ -24,7 +25,8 @@ const int CANVAS_WIDTH = 240;
 const int CANVAS_HEIGHT = 240;
 
 float ft_point; // 屏幕光标点的温度值
-
+float ft_max;
+float ft_min;
 void smooth_on()
 {
   analogWrite(SCREEN_BL_PIN, 0);
@@ -316,6 +318,59 @@ void data_pixel_to_draw_pixel(unsigned short data[GRID_SIZE][GRID_SIZE])
 }
 
 
+
+
+
+// 计算温度统计信息
+void compute_temp_statistics() {
+    T_max = 0;
+    T_min = 0xFFFF;  // 初始化为最大可能值
+    x_max = 0;
+    y_max = 0;
+    x_min = 0;
+    y_min = 0;
+    // 仅遍历中心区域 (2-29行, 2-29列)
+    for (uint8_t y = 2; y <= 29; y++) {
+        for (uint8_t x = 2; x <= 29; x++) {
+            uint16_t pixel = new_data_pixel[y][x];
+            
+            // 跳过0值（如果传感器输出0，但不是有效温度）
+            if (pixel == 0) {
+                printf("发现0值在 (%d,%d)\n", x, y);
+                continue;
+            }
+            // 更新最高温度
+            if (pixel > T_max) {
+                T_max = pixel;
+                x_max = x;
+                y_max = y;
+            }
+            // 更新最低温度
+            if (pixel < T_min) {
+                T_min = pixel;
+                x_min = x;
+                y_min = y;
+            }
+            // 累加中心区域值
+            T_avg += pixel;
+        }
+    }
+    // 计算中心区域平均值
+    if (T_avg > 0) {
+        T_avg = (uint16_t)(T_avg / 784);
+    } else {
+        T_avg = 0;  // 无有效像素
+    }
+}
+
+
+
+
+
+
+
+
+
 void Display_loop()
 {
   if (in_settings)
@@ -328,17 +383,24 @@ void Display_loop()
   }
   else
   { // 正常模式
-    float ft_max = static_cast<float>(T_max) * DIVISOR - KELVIN_OFFSET;
-    float ft_min = static_cast<float>(T_min) * DIVISOR - KELVIN_OFFSET;
-    // float ft_avg = static_cast<float>(T_avg) * DIVISOR - KELVIN_OFFSET;
+    // float ft_max = static_cast<float>(T_max) * DIVISOR - KELVIN_OFFSET;
+    // float ft_min = static_cast<float>(T_min) * DIVISOR - KELVIN_OFFSET;
+    // // float ft_avg = static_cast<float>(T_avg) * DIVISOR - KELVIN_OFFSET;
 
     unsigned short value;
     waitForUnlock(prob_lock, 5);
-
     {
       LockGuard lock(pix_cp_lock);                                                                                            // 线程锁的域
       process_rotation_to_new(data_pixel, new_data_pixel, ROTATION_90_CW_TO_NEW);                                             // 把旋转后的新数据存入新数组
-      ft_point = (float)(new_data_pixel[(int)(test_point[0] / PROB_SCALE)][(int)(test_point[1] / PROB_SCALE)] / 10) - 273.15; // 中心点/选择点 温度
+
+      //温度校准
+      correct_thermal_data();
+      //计算最高最低值等
+      compute_temp_statistics();
+      ft_max = static_cast<float>(T_max) * DIVISOR - KELVIN_OFFSET;
+      ft_min = static_cast<float>(T_min) * DIVISOR - KELVIN_OFFSET;
+      ft_point = (float)(new_data_pixel[(int)(test_point[0] / PROB_SCALE)][(int)(test_point[1] / PROB_SCALE)] / 10) - KELVIN_OFFSET; // 中心点/选择点 温度
+
       data_pixel_to_draw_pixel(new_data_pixel); // 将新数据转换为绘图数据
 
     }
@@ -379,10 +441,9 @@ void Display_loop()
       draw_cross_and_temp(ft_point, test_point[0], test_point[1], -1);
 
     if (flag_trace_max)
-      draw_cross_and_temp(ft_max, (x_max * 15 + 1) >> 1, ((31 - y_max) * 15 + 1) >> 1, -1);
-
+      draw_cross_and_temp(ft_max, (y_max * 15 + 1) >> 1, ((x_max) * 15 + 1) >> 1, -1);
     if (flag_trace_min)
-      draw_cross_and_temp(ft_max, (x_min * 15 + 1) >> 1, ((31 - y_min) * 15 + 1) >> 1, -1);
+      draw_cross_and_temp(ft_max, (y_min * 15 + 1) >> 1, ((x_min) * 15 + 1) >> 1, -1);
   }
 }
 

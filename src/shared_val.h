@@ -161,8 +161,7 @@ bool pix_cp_lock = false;
 bool cmap_loading_lock = false;      // 颜色映射表加载锁
 bool PROB_READY = false; // 探头是否准备就绪
 int brightness = 128;                // 屏幕亮度
-unsigned short T_max, T_min;         // 温度
-unsigned long T_avg;                 // 需要累加后再除平均数。所以要long类型
+
 uint16_t test_point[2] = {120, 120}; // 测温点的位置
 bool flag_show_cursor = true;        // 是否显示温度采集指针
 bool flag_show_temp_text = false;    // 是否显示温度文本
@@ -170,6 +169,12 @@ bool flag_trace_max = true;          // 是否使用最热点追踪
 bool flag_trace_min = true; //低温追踪
 int cursor_size = 10;                // 光标大小
 int temp_text_size = 2;              // 温度文本大小
+
+
+unsigned short T_max, T_min;         // 温度
+unsigned long T_avg;                 // 需要累加后再除平均数。所以要long类型
+uint8_t x_max, y_max, x_min, y_min; //最高温和最低温的点位
+
 
 bool in_settings = false; // 是否在设置界面
 
